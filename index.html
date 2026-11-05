@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Bottle Flipper</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+            font-family: 'Comfortaa', 'Quicksand', 'Nunito', 'Segoe UI', sans-serif;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #ffffff;
+            color: #2c3e50;
+        }
+
+        #app-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            max-width: 480px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        /* --- CARDS ONBOARDING OVERLAY --- */
+        #guides-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .cards-wrapper {
+            width: 85%;
+            height: 70%;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .guide-card {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: #f8f9fa;
+            border-radius: 28px;
+            border: 4px solid #e9ecef;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            transition: transform 0.4s ease, opacity 0.4s ease;
+            cursor: grab;
+        }
+
+        .guide-card h2 {
+            font-size: 28px;
+            font-weight: 800;
+            color: #343a40;
+            margin-bottom: 20px;
+            border-radius: 16px;
+            background: #e9ecef;
+            padding: 8px 20px;
+        }
+
+        .guide-card p {
+            font-size: 18px;
+            line-height: 1.6;
+            color: #6c757d;
+            font-weight: 600;
+        }
+
+        .dots-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #dee2e6;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        .dot.active {
+            background-color: #4c6ef5;
+            transform: scale(1.2);
+        }
+
+        .swipe-hint {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #adb5bd;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* --- GAME CANVAS & INTERFACE --- */
+        #game-screen {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        #score-board {
+            position: absolute;
+            top: 40px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .score-card {
+            background: rgba(241, 243, 245, 0.9);
+            border-radius: 20px;
+            padding: 10px 24px;
+            text-align: center;
+            border: 2px solid #dee2e6;
+        }
+
+        .score-card span {
+            display: block;
+            font-size: 12px;
+            font-weight: 800;
+            color: #868e96;
+            text-transform: uppercase;
+        }
+
+        .score-card div {
+            font-size: 28px;
+            font-weight: 900;
+            color: #343a40;
+        }
+
+        #rage-message {
+            position: absolute;
+            top: 120px;
+            width: 100%;
+            text-align: center;
+            font-size: 20px;
+            font-weight: 900;
+            color: #ff6b6b;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+
+    <!-- ONBOARDING CARDS OVERLAY -->
+    <div id="guides-overlay">
+        <div class="cards-wrapper" id="cards-container">
+            
+            <div class="guide-card" style="z-index: 6;">
+                <h2>BOTTLE FLIPPER</h2>
+                <p>Welcome to the ultimate bottle flipping simulator. Swipe left to read the guides.</p>
+            </div>
+
+            <div class="guide-card" style="z-index: 5;">
+                <h2>HOW TO PLAY</h2>
+                <p>The bottle sits right on the table. Swipe UP to toss it into the air.</p>
+            </div>
+
+            <div class="guide-card" style="z-index: 4;">
+                <h2>CAP FLIPS INCLUDED</h2>
+                <p>Both standard base landings and extreme upside-down cap landings are now fully supported!</p>
+            </div>
+
+            <div class="guide-card" style="z-index: 3;">
+                <h2>REALISTIC TUMBLING</h2>
+                <p>Miss a shot or swipe too far forward, and watch your bottle realistically tumble down to the ground.</p>
+            </div>
+
+            <div class="guide-card" style="z-index: 2;">
+                <h2>LOSE EVERYTHING</h2>
+                <p>If you fail or tumble, your current score resets straight back to ZERO.</p>
+            </div>
+
+            <div class="guide-card" style="z-index: 1;">
+                <h2>READY?</h2>
+                <p>Swipe this final card away to start playing!</p>
+            </div>
+
+        </div>
+
+        <div class="dots-container" id="dots-container">
+            <div class="dot active"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+
+        <div class="swipe-hint" id="swipe-hint-text">Swipe Left</div>
+    </div>
+
+    <!-- MAIN GAME SCREEN -->
+    <div id="game-screen">
+        <div id="score-board">
+            <div class="score-card">
+                <span>SCORE</span>
+                <div id="score-val">0</div>
+            </div>
+            <div class="score-card">
+                <span>BEST</span>
+                <div id="best-val">0</div>
+            </div>
+        </div>
+        <div id="rage-message">TUMBLE DOWN! ZERO POINTS!</div>
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+</div>
+
+<script>
+    /* --- ONBOARDING CARDS SYSTEM --- */
+    const cards = Array.from(document.querySelectorAll('.guide-card'));
+    const dots = Array.from(document.querySelectorAll('.dot'));
+    const guidesOverlay = document.getElementById('guides-overlay');
+    const swipeHintText = document.getElementById('swipe-hint-text');
+
+    let currentCardIndex = 0;
+    let cardStartX = 0;
+    let cardStartY = 0;
+    let cardCurrentX = 0;
+    let isDraggingCard = false;
+
+    function initCardTouch() {
+        guidesOverlay.addEventListener('touchstart', handleCardStart, { passive: false });
+        guidesOverlay.addEventListener('touchmove', handleCardMove, { passive: false });
+        guidesOverlay.addEventListener('touchend', handleCardEnd, { passive: false });
+
+        guidesOverlay.addEventListener('mousedown', handleCardStart);
+        window.addEventListener('mousemove', handleCardMove);
+        window.addEventListener('mouseup', handleCardEnd);
+    }
+
+    function handleCardStart(e) {
+        if (currentCardIndex >= cards.length) return;
+        isDraggingCard = true;
+        const pt = e.touches ? e.touches[0] : e;
+        cardStartX = pt.clientX;
+        cardStartY = pt.clientY;
+        cardCurrentX = cardStartX;
+    }
+
+    function handleCardMove(e) {
+        if (!isDraggingCard || currentCardIndex >= cards.length) return;
+        const pt = e.touches ? e.touches[0] : e;
+        cardCurrentX = pt.clientX;
+        const diffX = cardCurrentX - cardStartX;
+        const activeC = cards[currentCardIndex];
+        
+        if (activeC) {
+            const rot = diffX * 0.05;
+            activeC.style.transform = `translate3d(${diffX}px, 0, 0) rotate(${rot}deg)`;
+        }
+    }
+
+    function handleCardEnd() {
+        if (!isDraggingCard || currentCardIndex >= cards.length) return;
+        isDraggingCard = false;
+        const diffX = cardCurrentX - cardStartX;
+        const activeC = cards[currentCardIndex];
+
+        if (Math.abs(diffX) > 80) {
+            const dir = diffX > 0 ? 1 : -1;
+            activeC.style.transform = `translate3d(${dir * 600}px, 0, 0) rotate(${dir * 45}deg)`;
+            activeC.style.opacity = '0';
+            
+            currentCardIndex++;
+            updateDots();
+
+            if (currentCardIndex === cards.length - 1) {
+                swipeHintText.innerText = "Swipe to Play!";
+            }
+
+            if (currentCardIndex >= cards.length) {
+                setTimeout(() => {
+                    guidesOverlay.style.display = 'none';
+                }, 300);
+            }
+        } else {
+            activeC.style.transform = `translate3d(0, 0, 0) rotate(0deg)`;
+        }
+    }
+
+    function updateDots() {
+        dots.forEach((dot, idx) => {
+            if (idx === currentCardIndex) {
+                dot.classList.add('active');
+            } else {
+                dot.classList.remove('active');
+            }
+        });
+    }
+
+    initCardTouch();
+
+
+    /* --- BOTTLE FLIP, CAP FLIP & TUMBLING PHYSICS --- */
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreValEl = document.getElementById('score-val');
+    const bestValEl = document.getElementById('best-val');
+    const rageMsgEl = document.getElementById('rage-message');
+
+    let width = 0;
+    let height = 0;
+
+    function resizeCanvas() {
+        const container = document.getElementById('app-container');
+        width = container.clientWidth;
+        height = container.clientHeight;
+        canvas.width = width;
+        canvas.height = height;
+    }
+    
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    let score = 0;
+    let bestScore = 0;
+
+    const ragePhrases = [
+        "MISSED THE CAP AND BASE! TUMBLE!",
+        "WAY TOO FAR! TUMBLING!",
+        "MISSED IT! DOWN IT GOES!",
+        "BAD FLIP! CRASH!",
+        "UNLUCKY TUMBLE! 0 POINTS!"
+    ];
+
+    const table = {
+        x: 0,
+        y: 0,
+        w: 180,
+        h: 18,
+        legW: 14,
+        legH: 140
+    };
+
+    const bottle = {
+        x: 0,
+        y: 0,
+        w: 34,
+        h: 90,
+        vx: 0,
+        vy: 0,
+        angle: 0,
+        vRot: 0,
+        state: 'IDLE_ON_TABLE' // 'IDLE_ON_TABLE', 'FLIPPING', 'TUMBLING'
+    };
+
+    function resetPositions() {
+        table.x = (width - table.w) / 2;
+        table.y = height - 220;
+
+        bottle.x = table.x + table.w / 2;
+        bottle.y = table.y - bottle.h / 2;
+        bottle.vx = 0;
+        bottle.vy = 0;
+        bottle.angle = 0;
+        bottle.vRot = 0;
+        bottle.state = 'IDLE_ON_TABLE';
+    }
+
+    resetPositions();
+
+    // Controls
+    let flipStartX = 0;
+    let flipStartY = 0;
+    let flipStartTime = 0;
+    let isSwipingBottle = false;
+
+    canvas.addEventListener('touchstart', (e) => {
+        if (bottle.state !== 'IDLE_ON_TABLE') return;
+        const pt = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        flipStartX = pt.clientX - rect.left;
+        flipStartY = pt.clientY - rect.top;
+        flipStartTime = Date.now();
+        isSwipingBottle = true;
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', (e) => {
+        if (!isSwipingBottle || bottle.state !== 'IDLE_ON_TABLE') return;
+        isSwipingBottle = false;
+        const pt = e.changedTouches[0];
+        const rect = canvas.getBoundingClientRect();
+        const endX = pt.clientX - rect.left;
+        const endY = pt.clientY - rect.top;
+        const duration = Math.max(10, Date.now() - flipStartTime);
+
+        executeFlip(flipStartX, flipStartY, endX, endY, duration);
+    }, { passive: false });
+
+    canvas.addEventListener('mousedown', (e) => {
+        if (bottle.state !== 'IDLE_ON_TABLE') return;
+        const rect = canvas.getBoundingClientRect();
+        flipStartX = e.clientX - rect.left;
+        flipStartY = e.clientY - rect.top;
+        flipStartTime = Date.now();
+        isSwipingBottle = true;
+    });
+
+    window.addEventListener('mouseup', (e) => {
+        if (!isSwipingBottle || bottle.state !== 'IDLE_ON_TABLE') return;
+        isSwipingBottle = false;
+        const rect = canvas.getBoundingClientRect();
+        const endX = e.clientX - rect.left;
+        const endY = e.clientY - rect.top;
+        const duration = Math.max(10, Date.now() - flipStartTime);
+
+        executeFlip(flipStartX, flipStartY, endX, endY, duration);
+    });
+
+    function executeFlip(sx, sy, ex, ey, duration) {
+        const dx = ex - sx;
+        const dy = ey - sy;
+
+        if (dy < -15) {
+            bottle.state = 'FLIPPING';
+            const speedY = Math.abs(dy) / duration;
+            bottle.vy = -Math.min(Math.max(speedY * 11, 13), 22);
+            bottle.vx = (dx / duration) * 1.6;
+
+            const rotSpeed = Math.min(Math.max(speedY * 0.22, 0.16), 0.35);
+            bottle.vRot = rotSpeed;
+
+            rageMsgEl.style.opacity = '0';
+        }
+    }
+
+    function triggerFailTumble() {
+        score = 0;
+        scoreValEl.innerText = score;
+        const msg = ragePhrases[Math.floor(Math.random() * ragePhrases.length)];
+        rageMsgEl.innerText = msg;
+        rageMsgEl.style.opacity = '1';
+
+        bottle.state = 'TUMBLING';
+        bottle.vy = -4;
+        bottle.vx = (Math.random() > 0.5 ? 1 : -1) * (3 + Math.random() * 4);
+        bottle.vRot = 0.25;
+
+        setTimeout(() => {
+            resetPositions();
+        }, 1500);
+    }
+
+    function triggerSuccess(isCapFlip) {
+        score++;
+        scoreValEl.innerText = score;
+        if (score > bestScore) {
+            bestScore = score;
+            bestValEl.innerText = bestScore;
+        }
+
+        if (isCapFlip) {
+            rageMsgEl.innerText = "EPIC CAP FLIP LANDED!";
+            rageMsgEl.style.opacity = '1';
+        }
+
+        setTimeout(() => {
+            rageMsgEl.style.opacity = '0';
+            resetPositions();
+        }, 1000);
+    }
+
+    /* --- GAME LOOP & PHYSICS --- */
+    const gravity = 0.48;
+
+    function update() {
+        if (bottle.state === 'FLIPPING') {
+            bottle.x += bottle.vx;
+            bottle.y += bottle.vy;
+            bottle.vy += gravity;
+            bottle.angle += bottle.vRot;
+
+            const tableTop = table.y;
+
+            // Check collision for standard Base Landings (bottle bottom touches table)
+            const bottleBottomY = bottle.y + (Math.cos(bottle.angle) * (bottle.h / 2)) + (Math.sin(bottle.angle) * (bottle.w / 2));
+            if (bottle.vy > 0 && bottle.y >= tableTop - 55 && bottle.y < table.y + table.h) {
+                if (bottle.x > table.x - 15 && bottle.x < table.x + table.w + 15) {
+                    
+                    let normalizedAngle = (bottle.angle * (180 / Math.PI)) % 360;
+                    if (normalizedAngle < 0) normalizedAngle += 360;
+
+                    // Condition 1: Normal Base Landing (upright around 0/360 deg)
+                    const isBaseLanding = (normalizedAngle < 22 || normalizedAngle > 338);
+                    // Condition 2: Cap Landing (upside down around 180 deg)
+                    const isCapLanding = (normalizedAngle > 158 && normalizedAngle < 202);
+
+                    const luckFactor = Math.random(); 
+                    const passedLuck = luckFactor > 0.55; 
+
+                    if ((isBaseLanding || isCapLanding) && passedLuck) {
+                        bottle.vy = 0;
+                        bottle.vx = 0;
+                        bottle.vRot = 0;
+                        
+                        if (isCapLanding) {
+                            bottle.angle = Math.PI; // Snap perfectly upside down on cap
+                            bottle.y = tableTop - bottle.h / 2;
+                            triggerSuccess(true);
+                        } else {
+                            bottle.angle = 0; // Snap upright on base
+                            bottle.y = tableTop - bottle.h / 2;
+                            triggerSuccess(false);
+                        }
+                    } else {
+                        triggerFailTumble();
+                    }
+                }
+            }
+
+            if (bottle.y > height + 100 || bottle.x < -100 || bottle.x > width + 100) {
+                triggerFailTumble();
+            }
+        } 
+        else if (bottle.state === 'TUMBLING') {
+            bottle.x += bottle.vx;
+            bottle.y += bottle.vy;
+            bottle.vy += gravity;
+            bottle.angle += bottle.vRot;
+
+            const groundY = height - 40;
+            if (bottle.y + bottle.h / 2 >= groundY) {
+                bottle.y = groundY - bottle.h / 2;
+                bottle.vy = -bottle.vy * 0.35;
+                bottle.vx *= 0.8;
+                bottle.vRot *= 0.5;
+            }
+        }
+    }
+
+    function drawRoundedRect(x, y, w, h, r, color) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    function render() {
+        ctx.clearRect(0, 0, width, height);
+
+        // Draw Table
+        const legY = table.y + table.h;
+        drawRoundedRect(table.x + 20, legY, table.legW, table.legH, 6, "#ced4da");
+        drawRoundedRect(table.x + table.w - 20 - table.legW, legY, table.legW, table.legH, 6, "#ced4da");
+        drawRoundedRect(table.x, table.y, table.w, table.h, 9, "#495057");
+
+        // Draw Bottle
+        ctx.save();
+        ctx.translate(bottle.x, bottle.y);
+        ctx.rotate(bottle.angle);
+
+        const bw = bottle.w;
+        const bh = bottle.h;
+
+        // Bottle Body
+        drawRoundedRect(-bw / 2, -bh / 2 + 20, bw, bh - 20, 10, "#4dabf7");
+        
+        // Water line fill
+        drawRoundedRect(-bw / 2 + 3, 0, bw - 6, bh / 2 - 4, 6, "#339af0");
+
+        // Bottle Neck
+        drawRoundedRect(-bw / 4, -bh / 2 + 6, bw / 2, 16, 4, "#74c0fc");
+
+        // Bottle Cap
+        drawRoundedRect(-bw / 4 - 1, -bh / 2, bw / 2 + 2, 8, 3, "#ff6b6b");
+
+        ctx.restore();
+    }
+
+    function loop() {
+        update();
+        render();
+        requestAnimationFrame(loop);
+    }
+
+    loop();
+</script>
+</body>
+</html>
+
+              
